@@ -54,31 +54,19 @@ class MethodChannelMobileScanner extends MobileScannerPlatform {
     final List<Map<Object?, Object?>> barcodes =
         data.cast<Map<Object?, Object?>>();
 
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      final Map<Object?, Object?>? imageData =
+          event['image'] as Map<Object?, Object?>?;
+      final Uint8List? image = imageData?['bytes'] as Uint8List?;
+      final double? width = imageData?['width'] as double?;
+      final double? height = imageData?['height'] as double?;
+
       return BarcodeCapture(
         raw: event,
-        barcodes: barcodes
-            .map(
-              (barcode) => Barcode(
-                rawValue: barcode['payload'] as String?,
-                format: BarcodeFormat.fromRawValue(
-                  barcode['symbology'] as int? ?? -1,
-                ),
-              ),
-            )
-            .toList(),
-      );
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS) {
-      final double? width = event['width'] as double?;
-      final double? height = event['height'] as double?;
-
-      return BarcodeCapture(
-        raw: data,
         barcodes: barcodes.map(Barcode.fromNative).toList(),
-        image: event['image'] as Uint8List?,
+        image: image,
         size: width == null || height == null ? Size.zero : Size(width, height),
       );
     }
@@ -153,11 +141,22 @@ class MethodChannelMobileScanner extends MobileScannerPlatform {
   }
 
   @override
-  Future<BarcodeCapture?> analyzeImage(String path) async {
-    final Map<String, Object?>? result =
-        await methodChannel.invokeMapMethod<String, Object?>(
+  Future<BarcodeCapture?> analyzeImage(
+    String path, {
+    List<BarcodeFormat> formats = const <BarcodeFormat>[],
+  }) async {
+    final Map<Object?, Object?>? result =
+        await methodChannel.invokeMapMethod<Object?, Object?>(
       'analyzeImage',
-      path,
+      {
+        'filePath': path,
+        'formats': formats.isEmpty
+            ? null
+            : [
+                for (final BarcodeFormat format in formats)
+                  if (format != BarcodeFormat.unknown) format.rawValue,
+              ],
+      },
     );
 
     return _parseBarcode(result);

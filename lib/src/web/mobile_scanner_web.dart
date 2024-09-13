@@ -4,6 +4,7 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:mobile_scanner/src/enums/barcode_format.dart';
 import 'package:mobile_scanner/src/enums/camera_facing.dart';
 import 'package:mobile_scanner/src/enums/mobile_scanner_error_code.dart';
 import 'package:mobile_scanner/src/enums/torch_state.dart';
@@ -87,6 +88,18 @@ class MobileScannerWeb extends MobileScannerPlatform {
       ..objectFit = 'cover'
       ..transformOrigin = 'center'
       ..pointerEvents = 'none';
+
+    // Do not show the media controls, as this is a preview element.
+    // Also prevent play/pause events from changing the media controls.
+    videoElement.controls = false;
+
+    videoElement.onplay = (JSAny _) {
+      videoElement.controls = false;
+    }.toJS;
+
+    videoElement.onpause = (JSAny _) {
+      videoElement.controls = false;
+    }.toJS;
 
     // Attach the video element to its parent container
     // and setup the PlatformView factory for this `textureId`.
@@ -220,7 +233,10 @@ class MobileScannerWeb extends MobileScannerPlatform {
   }
 
   @override
-  Future<BarcodeCapture?> analyzeImage(String path) {
+  Future<BarcodeCapture?> analyzeImage(
+    String path, {
+    List<BarcodeFormat> formats = const <BarcodeFormat>[],
+  }) {
     throw UnsupportedError('analyzeImage() is not supported on the web.');
   }
 
